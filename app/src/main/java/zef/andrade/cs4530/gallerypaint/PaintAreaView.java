@@ -171,7 +171,7 @@ public class PaintAreaView extends View {
         int heightSpec = MeasureSpec.getSize(heightMeasureSpec);
 
         int width = widthSpec;
-        int height = heightSpec/2;
+        int height = (int)(heightSpec/1.2);
 
         setMeasuredDimension(
                 resolveSize(width, widthMeasureSpec),

@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 
 /**
  * Created by zandrade on 9/27/2016.
@@ -21,6 +22,10 @@ public class SideMenu extends LinearLayout {
 
     private final Button backButton;
     private final Button forwardButton;
+    private final Button playButton;
+    private final Button stopButton;
+    private final Button resetButton;
+    private final ColorControl colorControl;
 
 
     private OnForwardListener mOnForwardListener;
@@ -46,8 +51,8 @@ public class SideMenu extends LinearLayout {
                 mOnBackListener.moveBackListener();
             }
         });
-
-        this.addView(backButton, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        int size = 0;
+        this.addView(backButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
 
         forwardButton = new Button(context);
 
@@ -65,11 +70,35 @@ public class SideMenu extends LinearLayout {
             }
         });
 
-        this.addView(forwardButton, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        this.addView(forwardButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
 
         handleEnableDisableOfButtons();
+
+        playButton = new Button(context);
+        playButton.setBackgroundResource(R.drawable.playbtn);
+        this.addView(playButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
+
+        stopButton = new Button(context);
+        stopButton.setBackgroundResource(R.drawable.stopbtn);
+        this.addView(stopButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
+
+        colorControl = new ColorControl(context);
+        colorControl.setSplotchColor(PaintAreaView.DEFAULT_ACTIVE_COLOR);
+        this.addView(colorControl, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
+
+        resetButton = new Button(context);
+        resetButton.setText("RESET \n (Restart\n after)");
+        this.addView(resetButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.20f));
+
     }
 
+    public ColorControl getColorControl() {
+        return colorControl;
+    }
+
+    public Button getResetButton() {
+        return resetButton;
+    }
 
     public void handleEnableDisableOfButtons() {
         int numDrawings = Gallery.getInstance().getDrawingCount();
@@ -98,19 +127,12 @@ public class SideMenu extends LinearLayout {
         }
     }
 
-    public OnForwardListener getOnForwardListener() {
-
-        return mOnForwardListener;
-    }
 
     public void setOnForwardListener(OnForwardListener onForwardListener) {
         this.mOnForwardListener = onForwardListener;
     }
 
-    public OnBackListener getOnBackListener() {
 
-        return mOnBackListener;
-    }
 
     public void setOnBackListener(OnBackListener onBackListener) {
         this.mOnBackListener = onBackListener;

@@ -1,11 +1,16 @@
 package zef.andrade.cs4530.gallerypaint;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.LinearLayout;
 
 import java.io.BufferedReader;
@@ -15,7 +20,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import com.google.gson.Gson;
@@ -29,11 +33,42 @@ import com.google.gson.reflect.TypeToken;
  *
  */
 public class GalleryActivity extends AppCompatActivity implements PaintAreaView.OnNewDrawingListener,
-        SideMenu.OnForwardListener, SideMenu.OnBackListener{
+        SideMenu.OnForwardListener, SideMenu.OnBackListener, ColorControl.OnClickListener {
 
     private PaintAreaView mPaintAreaView;
     private Drawing mDrawing;
     private SideMenu mSideMenu;
+    private final int PICK_SELECTED_COLOR = 1;
+    public static final String COLOR_SELECTED = "Color_Selected";
+    private static int selectedColor = Color.YELLOW;
+    ColorControl colorControl;
+    private final String mPaletteColorFile = "currentPaletteColor.txt";
+
+    @Override
+    public void onClick(View view) {
+       // Open the PalleteActivity
+         Intent openPalleteActivityIntent = new Intent();
+         openPalleteActivityIntent.setClass(this, PaletteActivity.class);
+         startActivityForResult(openPalleteActivityIntent, PICK_SELECTED_COLOR);
+    }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // Check which request we're responding to
+        if (requestCode == PICK_SELECTED_COLOR) {
+            // Make sure the request was successful
+            if (resultCode == RESULT_OK && data != null) {
+                int newColor = data.getIntExtra(COLOR_SELECTED, selectedColor);
+                colorControl.setSplotchColor(newColor);
+                mPaintAreaView.setActiveColor(newColor);
+                //save the current color
+                saveCurrentColor();
+            }
+
+        }
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,14 +85,23 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         mSideMenu.setBackgroundColor(Color.GRAY);
         mSideMenu.setOnBackListener(this);
         mSideMenu.setOnForwardListener(this);
+        colorControl = mSideMenu.getColorControl();
+        colorControl.setOnClickListener(this);
+        colorControl.setSplotchColor(selectedColor);
+        mSideMenu.getResetButton().setOnClickListener(
+                new Button.OnClickListener() {
+                    public void onClick(View v) {
+                        deleteAllFiles();
+                    }}
+                    );
         rootLayout.addView(mSideMenu, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
-
-
         setContentView(rootLayout);
-
-
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
 
     @Override
     protected void onPause() {
@@ -65,6 +109,7 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
 
         mDrawing = mPaintAreaView.getDrawing();
         mDrawing.saveDrawing(getFilesDir());
+
     }
 
     @Override
@@ -72,16 +117,17 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         super.onResume();
 
         //deleteAllFiles();
-        // Load all drawings and add them up to the gallery
-        loadDrawings();
+        if (Gallery.getInstance().getDrawingCount() == 0) {
+            // Load all drawings and add them up to the gallery
+            loadDrawings();
+            Gallery.getInstance().setCurrentDrawingIndex(0);
 
-        Gallery.getInstance().setCurrentDrawingIndex(0);
-
-        // load first drawing in the view
-        if (Gallery.getInstance().getDrawingCount()> 0) {
-            loadDrawingIntoView();
+            // load first drawing into the view
+            if (Gallery.getInstance().getDrawingCount() > 0) {
+                loadDrawingIntoView();
+            }
         }
-
+        loadCurrentColor();
         mSideMenu.handleEnableDisableOfButtons();
     }
 
@@ -90,6 +136,35 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         mDrawing = Gallery.getInstance().getDrawing(currentDrawingIndex);
 
         mPaintAreaView.setDrawing(mDrawing);
+    }
+
+    private void saveCurrentColor() {
+        try {
+            File colorFile = new File(getFilesDir(), mPaletteColorFile);
+            FileWriter fileWriter = new FileWriter(colorFile, false);
+            BufferedWriter writer = new BufferedWriter(fileWriter);
+            int activeColor = mPaintAreaView.getActiveColor();
+            writer.write(activeColor + "\n");
+            writer.close();
+        }
+        catch (Exception e) {
+            Log.e("Saving current color","Error saving color file: " + mPaletteColorFile + " Error: " + e.getMessage());
+        }
+    }
+
+    private void loadCurrentColor() {
+        try {
+            File colorFile = new File(getFilesDir(), mPaletteColorFile);
+            FileReader fileReader = new FileReader(colorFile);
+            BufferedReader reader = new BufferedReader(fileReader);
+            int currentColor = Integer.parseInt(reader.readLine());
+            mPaintAreaView.setActiveColor(currentColor);
+            mSideMenu.getColorControl().setSplotchColor(currentColor);
+            reader.close();
+        }
+        catch (Exception e) {
+            Log.e("Loading current color","Error loading color file: " + mPaletteColorFile + " Error: " + e.getMessage());
+        }
     }
 
     private void saveDrawings() {
@@ -180,9 +255,9 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         File dir = new File(getFilesDir() + "");
         String[] files = dir.list();
         for (int i=0;i< files.length; i++) {
-            if (files[i].contains("drawing")) {
+           // if (files[i].contains("drawing")) {
                 new File(dir, files[i]).delete();
-            }
+            //}
         }
     }
 
@@ -244,4 +319,5 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         // handle enable/disable of back and forward buttons
         mSideMenu.handleEnableDisableOfButtons();
     }
+
 }
