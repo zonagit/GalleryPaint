@@ -34,6 +34,8 @@ public class PaintAreaView extends View {
     private Bitmap mBitmap;
     private Canvas mCanvas;
     private Paint mPaint;
+    private boolean mInPlay;
+    private int mCurrentStrokeIndex;// the stroke to be painted when in play mode
 
     private int mActiveColor;// current path color
 
@@ -49,6 +51,15 @@ public class PaintAreaView extends View {
         updateGalleryListener = onNewDrawingListener;
     }
 
+    public int getCurrentStrokeIndex ()
+    {
+        return mCurrentStrokeIndex;
+    }
+
+    public void setCurrentStrokeIndex(int index) {
+        mCurrentStrokeIndex = index;
+    }
+
     public int getActiveColor() {
         return mActiveColor;
     }
@@ -57,11 +68,17 @@ public class PaintAreaView extends View {
         mActiveColor = color;
     }
 
+    public void setInPlay (boolean inPlay) {
+        mInPlay = inPlay;
+    }
+
     public void resetBitMap() {
        // mBitmap = Bitmap.createBitmap(mBitmap.getWidth(), mBitmap.getHeight(), Bitmap.Config.ARGB_8888);
         mCanvas.drawColor(BACKGROUND_PALETTE_COLOR);
 
     }
+
+
 
     public Drawing getDrawing() {
         return mDrawing;
@@ -78,6 +95,7 @@ public class PaintAreaView extends View {
         //TODO: Load the first drawing in the collection if any
         mDrawing = new Drawing();
         mCanvas = null;
+        mInPlay = false;
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setColor(Color.GREEN);
         mNewPath = null;
@@ -92,6 +110,9 @@ public class PaintAreaView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (mInPlay) {
+            return true;
+        }
         // convert touch point to unit coordinate space
         PointF newPoint = new PointF();
         newPoint.set(event.getX()/getWidth(),event.getY()/getHeight());
@@ -129,6 +150,10 @@ public class PaintAreaView extends View {
         for (Stroke stroke : strokes) {
             stroke.drawPalettePath(mCanvas, mPaint,mUnitMatrix);
         }
+    }
+
+    public void drawOneStroke(int index) {
+        mDrawing.getStrokes().get(index).drawPalettePath(mCanvas, mPaint,mUnitMatrix);
     }
 
     @Override

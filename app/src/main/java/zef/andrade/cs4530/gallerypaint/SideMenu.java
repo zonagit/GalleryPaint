@@ -20,6 +20,14 @@ public class SideMenu extends LinearLayout {
         void moveBackListener();
     }
 
+    public interface OnPlayListener {
+        void playListener();
+    }
+
+    public interface OnStopListener {
+        void stopListener();
+    }
+
     private final Button backButton;
     private final Button forwardButton;
     private final Button playButton;
@@ -30,10 +38,9 @@ public class SideMenu extends LinearLayout {
 
     private OnForwardListener mOnForwardListener;
     private OnBackListener mOnBackListener;
+    private OnPlayListener mOnPlayListener;
+    private OnStopListener mOnStopListener;
 
-
-    //TODO: Play/Pause Button
-    //TODO: Current Color Control
     public SideMenu(Context context) {
         super(context);
 
@@ -52,7 +59,7 @@ public class SideMenu extends LinearLayout {
             }
         });
         int size = 0;
-        this.addView(backButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
+        this.addView(backButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.25f));
 
         forwardButton = new Button(context);
 
@@ -70,25 +77,59 @@ public class SideMenu extends LinearLayout {
             }
         });
 
-        this.addView(forwardButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
+        this.addView(forwardButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.25f));
 
         handleEnableDisableOfButtons();
 
+        //if there are no strokes display stop button otherwise display play button
+
         playButton = new Button(context);
         playButton.setBackgroundResource(R.drawable.playbtn);
+        playButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+               // Disable back and forward buttons
+                forwardButton.setBackgroundResource(R.drawable.forwarddisabled);
+                forwardButton.setEnabled(false);
+                backButton.setBackgroundResource(R.drawable.backdisabled);
+                backButton.setEnabled(false);
+                // Disable the color selector control
+                colorControl.setEnabled(false);
+                resetButton.setEnabled(false);
+                // Show square
+                playButton.setVisibility(View.GONE);
+                stopButton.setVisibility(View.VISIBLE);
+                // call GalleryActivity to do the work
+                mOnPlayListener.playListener();
+            }
+        });
         this.addView(playButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
 
         stopButton = new Button(context);
         stopButton.setBackgroundResource(R.drawable.stopbtn);
+        stopButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // handle back and forward buttons
+                handleEnableDisableOfButtons();
+                // Enable the color selector control
+                colorControl.setEnabled(true);
+                resetButton.setEnabled(true);
+                // handle play/stop buttons
+                handlePlayStopButtons();
+                // call GalleryActivity to do the work
+                mOnStopListener.stopListener();
+            }
+        });
         this.addView(stopButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
 
         colorControl = new ColorControl(context);
         colorControl.setSplotchColor(PaintAreaView.DEFAULT_ACTIVE_COLOR);
-        this.addView(colorControl, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.15f));
+        this.addView(colorControl, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.25f));
 
         resetButton = new Button(context);
         resetButton.setText("RESET \n (Restart\n after)");
-        this.addView(resetButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.20f));
+        this.addView(resetButton, new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT,0.25f));
 
     }
 
@@ -127,15 +168,31 @@ public class SideMenu extends LinearLayout {
         }
     }
 
-
+    public void handlePlayStopButtons() {
+        int currentIndex = Gallery.getInstance().getCurrentDrawingIndex();
+        Drawing currentDrawing = Gallery.getInstance().getDrawing(currentIndex);
+        if (currentDrawing == null || currentDrawing.getStrokes().size() == 0) {
+            playButton.setVisibility(View.GONE);
+            stopButton.setVisibility(View.VISIBLE);
+        }
+        else {
+            playButton.setVisibility(View.VISIBLE);
+            stopButton.setVisibility(View.GONE);
+        }
+    }
     public void setOnForwardListener(OnForwardListener onForwardListener) {
         this.mOnForwardListener = onForwardListener;
     }
-
-
 
     public void setOnBackListener(OnBackListener onBackListener) {
         this.mOnBackListener = onBackListener;
     }
 
+    public void setOnPlayListener(OnPlayListener onPlayListener) {
+        this.mOnPlayListener = onPlayListener;
+    }
+
+    public void setOnStopListener(OnStopListener onStopListener) {
+        this.mOnStopListener = onStopListener;
+    }
 }

@@ -1,5 +1,7 @@
 package zef.andrade.cs4530.gallerypaint;
 
+import android.animation.IntEvaluator;
+import android.animation.ValueAnimator;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PointF;
@@ -10,6 +12,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
@@ -33,7 +36,8 @@ import com.google.gson.reflect.TypeToken;
  *
  */
 public class GalleryActivity extends AppCompatActivity implements PaintAreaView.OnNewDrawingListener,
-        SideMenu.OnForwardListener, SideMenu.OnBackListener, ColorControl.OnClickListener {
+        SideMenu.OnForwardListener, SideMenu.OnBackListener, SideMenu.OnPlayListener, SideMenu.OnStopListener,
+        ColorControl.OnClickListener, ValueAnimator.AnimatorUpdateListener {
 
     private PaintAreaView mPaintAreaView;
     private Drawing mDrawing;
@@ -43,6 +47,7 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
     private static int selectedColor = Color.YELLOW;
     ColorControl colorControl;
     private final String mPaletteColorFile = "currentPaletteColor.txt";
+    private ValueAnimator mAnimator;
 
     @Override
     public void onClick(View view) {
@@ -77,6 +82,11 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         LinearLayout rootLayout = new LinearLayout(this);
         rootLayout.setOrientation(LinearLayout.VERTICAL);
 
+        mAnimator = new ValueAnimator();
+        mAnimator.setDuration(5000);
+        mAnimator.setInterpolator(new LinearInterpolator());
+        mAnimator.addUpdateListener(this);
+
         mPaintAreaView = new PaintAreaView(this);
         mPaintAreaView.setOnNewDrawingListener(this);
         rootLayout.addView(mPaintAreaView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,0));
@@ -85,6 +95,8 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         mSideMenu.setBackgroundColor(Color.GRAY);
         mSideMenu.setOnBackListener(this);
         mSideMenu.setOnForwardListener(this);
+        mSideMenu.setOnPlayListener(this);
+        mSideMenu.setOnStopListener(this);
         colorControl = mSideMenu.getColorControl();
         colorControl.setOnClickListener(this);
         colorControl.setSplotchColor(selectedColor);
@@ -129,6 +141,7 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         }
         loadCurrentColor();
         mSideMenu.handleEnableDisableOfButtons();
+        mSideMenu.handlePlayStopButtons();
     }
 
     private void loadDrawingIntoView() {
@@ -279,6 +292,7 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
             mPaintAreaView.drawStrokes();
             mPaintAreaView.invalidate();
         }
+        mSideMenu.handlePlayStopButtons();
     }
 
     @Override
@@ -306,6 +320,7 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
 
             mPaintAreaView.invalidate();
         }
+        mSideMenu.handlePlayStopButtons();
     }
 
     @Override
@@ -318,6 +333,62 @@ public class GalleryActivity extends AppCompatActivity implements PaintAreaView.
         mDrawing.saveDrawing(getFilesDir());
         // handle enable/disable of back and forward buttons
         mSideMenu.handleEnableDisableOfButtons();
+        mSideMenu.handlePlayStopButtons();
     }
 
+    @Override
+    public void playListener() {
+        // Disable touch events in the paint area view
+        mPaintAreaView.setInPlay(true);
+        // animate current drawing
+        // get number of strokes of drawing
+        if (mDrawing != null) {
+            mPaintAreaView.setCurrentStrokeIndex(-1);
+            // clear all strokes
+            mPaintAreaView.resetBitMap();
+            int numStrokes = mDrawing.getStrokeCount();
+            mAnimator.setIntValues(0,numStrokes);
+//            IntEvaluator evaluator = new IntEvaluator();
+//            mAnimator.setEvaluator(evaluator);
+            mAnimator.start();
+        }
+    }
+
+    @Override
+    public void stopListener() {
+        mAnimator.cancel();
+        //Draw remaining strokes
+        int currentStroke = mPaintAreaView.getCurrentStrokeIndex();
+        for (int i= currentStroke; i< mDrawing.getStrokeCount(); i++) {
+            mPaintAreaView.drawOneStroke(i);
+        }
+        mPaintAreaView.invalidate();
+        // restore ui
+        mSideMenu.handleEnableDisableOfButtons();
+        mSideMenu.handlePlayStopButtons();
+        colorControl.setEnabled(true);
+        mSideMenu.getResetButton().setEnabled(true);
+        mPaintAreaView.setInPlay(false);
+        mPaintAreaView.setCurrentStrokeIndex(-1);
+    }
+
+    @Override
+    public void onAnimationUpdate(ValueAnimator valueAnimator) {
+        int strokeIndex = (Integer) valueAnimator.getAnimatedValue();
+        if (mDrawing.getStrokeCount() <= strokeIndex) {
+            // restore ui
+            stopListener();
+            return;
+        }
+        if (mPaintAreaView.getCurrentStrokeIndex() < 0 && strokeIndex == 0) {
+            mPaintAreaView.setCurrentStrokeIndex(0);
+            mPaintAreaView.drawOneStroke(0);
+
+        }
+        else if (mPaintAreaView.getCurrentStrokeIndex() < strokeIndex) {
+            mPaintAreaView.setCurrentStrokeIndex(strokeIndex);
+            mPaintAreaView.drawOneStroke(strokeIndex);
+            mPaintAreaView.invalidate();
+        }
+    }
 }
